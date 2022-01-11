@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmguCVFaceRecognition", "EmguCVFaceRecognition\EmguCVFaceRecognition.csproj", "{8C28757A-8FE1-4C2A-81B7-7B89BD4D4709}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8C28757A-8FE1-4C2A-81B7-7B89BD4D4709}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C28757A-8FE1-4C2A-81B7-7B89BD4D4709}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C28757A-8FE1-4C2A-81B7-7B89BD4D4709}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C28757A-8FE1-4C2A-81B7-7B89BD4D4709}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6409A428-9C8B-4659-BA01-4CB6F685D878}
+	EndGlobalSection
+EndGlobal

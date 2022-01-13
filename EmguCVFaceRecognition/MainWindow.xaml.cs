@@ -19,6 +19,8 @@ using Emgu.CV.CvEnum;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Emgu.Util;
 
 namespace EmguCVFaceRecognition
 {
@@ -34,8 +36,8 @@ namespace EmguCVFaceRecognition
 
         private bool FaceDetectionEnabled;
         private CascadeClassifier FaceCascadeClassifier = new CascadeClassifier("App_Data/haarcascade_frontalface_alt2.xml");
-
-        private Image<Bgr, byte> FaceResult;
+        private CascadeClassifier EyeCascadeClassifier = new CascadeClassifier("App_Data/haarcascade_eye.xml");
+        private Image<Gray, byte> FaceResult;
         private List<Mat> TrainedFaces = new List<Mat>();
         private List<int> PersonsLabes = new List<int>();
         List<string> PersonsNames = new List<string>();
@@ -44,6 +46,72 @@ namespace EmguCVFaceRecognition
 
         private bool IsTrained = false;
         private EigenFaceRecognizer Recognizer;
+
+
+
+        /// <summary>
+        /// Delete a GDI object
+        /// </summary>
+        /// <param name="o">The poniter to the GDI object to be deleted</param>
+        /// <returns></returns>
+        [DllImport("gdi32")]
+        private static extern int DeleteObject(IntPtr o);
+
+        /// <summary>
+        /// Convert an IImage to a WPF BitmapSource. The result can be used in the Set Property of Image.Source
+        /// </summary>
+        /// <param name="image">The Emgu CV Image</param>
+        /// <returns>The equivalent BitmapSource</returns>
+        public static BitmapSource ToBitmapSource(Image<Bgr,byte> image)
+        {
+            using (System.Drawing.Bitmap source =  image.ToBitmap())
+            {
+                IntPtr ptr = source.GetHbitmap(); //obtain the Hbitmap
+
+                BitmapSource bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                    ptr,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+                DeleteObject(ptr); //release the HBitmap
+                return bs;
+            }
+        }
+        public static BitmapSource ToBitmapSource(Image<Gray, byte> image)
+        {
+            using (System.Drawing.Bitmap source = image.ToBitmap())
+            {
+                IntPtr ptr = source.GetHbitmap(); //obtain the Hbitmap
+
+                BitmapSource bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                    ptr,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+                DeleteObject(ptr); //release the HBitmap
+                return bs;
+            }
+        }
+        public static BitmapSource ToBitmapSource(Mat image)
+        {
+            using (System.Drawing.Bitmap source = image.ToBitmap())
+            {
+                IntPtr ptr = source.GetHbitmap(); //obtain the Hbitmap
+
+                BitmapSource bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                    ptr,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+                DeleteObject(ptr); //release the HBitmap
+                return bs;
+            }
+        }
+
+
         public MainWindow()
         {
             InitializeComponent();
@@ -52,7 +120,7 @@ namespace EmguCVFaceRecognition
 
         private void CaptureButton_Click(object sender, RoutedEventArgs e)
         {
-            VideoCapture = new VideoCapture(1);
+            VideoCapture = new VideoCapture(0);
             VideoCapture.ImageGrabbed += ProcessFrame;
             VideoCapture.Start();
         }
@@ -62,7 +130,7 @@ namespace EmguCVFaceRecognition
             //video capture
             if (VideoCapture != null)
                 VideoCapture.Retrieve(Frame,0);
-            CurrentFrame = Frame.ToImage<Bgr, Byte>();/*.Resize(1280, 720, Inter.Cubic);*/
+            CurrentFrame = Frame.ToImage<Bgr, Byte>().Resize(1920, 1080, Inter.Cubic);
             Dispatcher.Invoke(() =>
             {
                 
@@ -73,21 +141,33 @@ namespace EmguCVFaceRecognition
                     CvInvoke.CvtColor(CurrentFrame, grayImage, ColorConversion.Bgr2Gray);
                     CvInvoke.EqualizeHist(grayImage, grayImage);
 
-                    var faces = FaceCascadeClassifier.DetectMultiScale(grayImage, 1.1, 3, new System.Drawing.Size(100,100), System.Drawing.Size.Empty);
+                    Mat processedImage = new Mat();
+
+                    var faces = FaceCascadeClassifier.DetectMultiScale(grayImage, 1.1, 3, new System.Drawing.Size(150,150), System.Drawing.Size.Empty);
                     if (faces.Length > 0)
                     {
                         foreach (var face in faces)
                         {
-                            //CvInvoke.Rectangle(CurrentFrame, face, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-
+                            CvInvoke.Rectangle(CurrentFrame, face, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
 
                             //add person
-                            FaceResult = CurrentFrame.Convert<Bgr, Byte>();
+                            FaceResult = CurrentFrame.Convert<Gray, Byte>();
                             FaceResult.ROI = face;
-                            var faceBitmap = FaceResult.ToBitmap();
-                            CapturedImagePreview.Source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(faceBitmap.GetHbitmap(),
-                    IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromWidthAndHeight((int)Width, (int)Height));
 
+                            var processedImage2 = FaceResult.Mat;
+                            //System.Drawing.Rectangle? searchedLeftEye = new System.Drawing.Rectangle();
+                            //System.Drawing.Rectangle? searchedRightEye = new System.Drawing.Rectangle();
+                            //var processedImage2 = FacePreProcessor.GetPreProcessedFace(CurrentFrame.Mat, 200, FaceCascadeClassifier, EyeCascadeClassifier,false
+                            //    , new System.Drawing.Rectangle(), new System.Drawing.Point(), new System.Drawing.Point(), ref searchedLeftEye, ref searchedRightEye);
+                            try
+                            {
+
+                                if (!processedImage2.IsEmpty)
+                                    FaceResult = processedImage2.ToImage<Gray, byte>();
+                                    CapturedImagePreview.Source = ToBitmapSource(FaceResult);
+                                    //CapturedImagePreview.Source =  ToBitmapSource(processedImage2);
+                            }
+                            catch (Exception) { }
                             //save image
                             if (EnableSaveImage)
                             {
@@ -113,7 +193,7 @@ namespace EmguCVFaceRecognition
                                 CvInvoke.EqualizeHist(grayFaceResult, grayFaceResult);
                                 var result = Recognizer.Predict(grayFaceResult);
                                 Debug.WriteLine(result.Label + ". " + result.Distance);
-                                if (result.Label > 0)
+                                if (result.Label > 0 && result.Distance < 5000)
                                 {
                                     CvInvoke.PutText(CurrentFrame, PersonsNames[result.Label], new System.Drawing.Point(face.X - 2, face.Y - 2),
                                     FontFace.HersheyComplex, 1.0, new Bgr(System.Drawing.Color.Orange).MCvScalar);
@@ -129,11 +209,11 @@ namespace EmguCVFaceRecognition
                         }
                     }
                 }
-                var bitmap = CurrentFrame.ToBitmap();
-               
-                VideoStream.Source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(),
-                    IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromWidthAndHeight((int)Width, (int)Height));
-
+                try
+                {
+                    VideoStream.Source = ToBitmapSource(CurrentFrame);
+                }
+                catch (Exception ex) { }
                 
 
             });
@@ -161,10 +241,10 @@ namespace EmguCVFaceRecognition
         }
 
 
-        private bool TrainImagesFromDir()
+        unsafe private bool TrainImagesFromDir()
         {
             int imagesCount = 0;
-            double threashold = 2000;
+            double threashold = 5000;
             TrainedFaces.Clear();
             PersonsLabes.Clear();
             PersonsNames.Clear();
@@ -184,7 +264,7 @@ namespace EmguCVFaceRecognition
                     imagesCount++;
                     Debug.WriteLine(imagesCount + ". " + name);
                 }
-                Recognizer = new EigenFaceRecognizer(imagesCount);
+                Recognizer = new EigenFaceRecognizer(imagesCount,threashold);
                 Recognizer.Train(TrainedFaces.ToArray(), PersonsLabes.ToArray());
                 IsTrained = true;
                 //Debug.WriteLine(imagesCount);
